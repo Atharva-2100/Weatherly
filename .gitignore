@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production Builds
+dist/
+*/dist/
+build/
+*/build/
+
+# Serverless & AWS Artifacts
+.serverless/
+*/.serverless/
+.aws-sam/
+*/.aws-sam/
+
+# Environment Variables & Secrets
+.env
+*/.env
+.env.local
+.env.*.local
+!.env.example
+!*/.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Editor & OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

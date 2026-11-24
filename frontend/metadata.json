@@ -1,0 +1,6 @@
+{
+  "name": "Weatherly — Smart Weather Monitoring System",
+  "description": "Cloud-based smart weather monitoring dashboard with real-time conditions, hourly and 7-day forecasts, interactive Recharts analytics, city search, favourites, and dynamic weather recommendations.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

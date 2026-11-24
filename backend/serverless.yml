@@ -1,0 +1,252 @@
+service: weatherly-backend
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'us-east-1'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 256
+  timeout: 15
+  logRetentionInDays: 14
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
+    DYNAMODB_WEATHER_HISTORY_TABLE: ${self:custom.tables.weatherHistory}
+    DYNAMODB_FAVORITES_TABLE: ${self:custom.tables.favorites}
+    DYNAMODB_PREFERENCES_TABLE: ${self:custom.tables.preferences}
+    DYNAMODB_CACHE_TABLE: ${self:custom.tables.cache}
+    OPENWEATHER_API_KEY: ${env:OPENWEATHER_API_KEY, ''}
+    OPENWEATHER_BASE_URL: ${env:OPENWEATHER_BASE_URL, 'https://api.openweathermap.org/data/2.5'}
+    OPENWEATHER_GEO_URL: ${env:OPENWEATHER_GEO_URL, 'https://api.openweathermap.org/geo/1.0'}
+    CACHE_TTL_CURRENT: '900'
+    CACHE_TTL_FORECAST: '3600'
+    CACHE_TTL_ANALYTICS: '1800'
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+          Resource:
+            - !GetAtt WeatherHistoryTable.Arn
+            - !Sub "${WeatherHistoryTable.Arn}/index/*"
+            - !GetAtt FavouriteLocationsTable.Arn
+            - !GetAtt UserPreferencesTable.Arn
+            - !GetAtt WeatherCacheTable.Arn
+
+custom:
+  tables:
+    weatherHistory: Weatherly_WeatherHistory_${self:provider.stage}
+    favorites: Weatherly_FavouriteLocations_${self:provider.stage}
+    preferences: Weatherly_UserPreferences_${self:provider.stage}
+    cache: Weatherly_WeatherCache_${self:provider.stage}
+
+functions:
+  # A. Current Weather API
+  getCurrentWeather:
+    handler: src/handlers/index.currentWeatherHandler
+    events:
+      - http:
+          path: api/weather/current
+          method: get
+          cors: true
+
+  # B. Weather Forecast API
+  getForecast:
+    handler: src/handlers/index.forecastHandler
+    events:
+      - http:
+          path: api/weather/forecast
+          method: get
+          cors: true
+
+  # C. City Search API
+  searchCity:
+    handler: src/handlers/index.citySearchHandler
+    events:
+      - http:
+          path: api/weather/search
+          method: get
+          cors: true
+
+  # D. Weather History API
+  getWeatherHistory:
+    handler: src/handlers/index.weatherHistoryHandler
+    events:
+      - http:
+          path: api/weather/history
+          method: get
+          cors: true
+
+  # E. Weather Analytics API
+  getWeatherAnalytics:
+    handler: src/handlers/index.weatherAnalyticsHandler
+    events:
+      - http:
+          path: api/weather/analytics
+          method: get
+          cors: true
+
+  # F. Favourite Locations API
+  getFavorites:
+    handler: src/handlers/index.favoritesHandler
+    events:
+      - http:
+          path: api/favorites
+          method: get
+          cors: true
+
+  addFavorite:
+    handler: src/handlers/index.favoritesHandler
+    events:
+      - http:
+          path: api/favorites
+          method: post
+          cors: true
+
+  removeFavorite:
+    handler: src/handlers/index.favoritesHandler
+    events:
+      - http:
+          path: api/favorites/{cityId}
+          method: delete
+          cors: true
+      - http:
+          path: api/favorites
+          method: delete
+          cors: true
+
+  # G. Weather Recommendations API
+  getRecommendations:
+    handler: src/handlers/index.recommendationsHandler
+    events:
+      - http:
+          path: api/weather/recommendations
+          method: get
+          cors: true
+
+  # H. User Preferences API
+  getPreferences:
+    handler: src/handlers/index.preferencesHandler
+    events:
+      - http:
+          path: api/preferences
+          method: get
+          cors: true
+
+  savePreferences:
+    handler: src/handlers/index.preferencesHandler
+    events:
+      - http:
+          path: api/preferences
+          method: post
+          cors: true
+
+  # Composite Full Weather API for React Frontend
+  getFullWeather:
+    handler: src/handlers/index.fullWeatherHandler
+    events:
+      - http:
+          path: api/weather/full
+          method: get
+          cors: true
+
+  # Automated Weather Collector (EventBridge Cron + HTTP trigger)
+  weatherCollector:
+    handler: src/handlers/index.weatherCollectorHandler
+    events:
+      # Hourly cron via Amazon EventBridge
+      - schedule:
+          rate:
+            - rate(1 hour)
+          enabled: true
+      # On-demand trigger endpoint
+      - http:
+          path: api/weather/collect
+          method: post
+          cors: true
+
+resources:
+  Resources:
+    # 1. WeatherHistory Table
+    WeatherHistoryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tables.weatherHistory}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: city
+            AttributeType: S
+          - AttributeName: recordedAt
+            AttributeType: S
+          - AttributeName: recordId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: city
+            KeyType: HASH
+          - AttributeName: recordedAt
+            KeyType: RANGE
+        GlobalSecondaryIndexes:
+          - IndexName: RecordIdIndex
+            KeySchema:
+              - AttributeName: recordId
+                KeyType: HASH
+            Projection:
+              ProjectionType: ALL
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+
+    # 2. FavouriteLocations Table
+    FavouriteLocationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tables.favorites}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: cityId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+          - AttributeName: cityId
+            KeyType: RANGE
+
+    # 3. UserPreferences Table
+    UserPreferencesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tables.preferences}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: userId
+            KeyType: HASH
+
+    # 4. WeatherCache Table
+    WeatherCacheTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.tables.cache}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: cacheKey
+            AttributeType: S
+        KeySchema:
+          - AttributeName: cacheKey
+            KeyType: HASH
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true

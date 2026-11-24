@@ -1,0 +1,33 @@
+{
+  "name": "weatherly-backend",
+  "version": "1.0.0",
+  "description": "Weatherly - Cloud-Based Weather Monitoring System Backend (Node.js, AWS Lambda, API Gateway, DynamoDB)",
+  "main": "src/handlers/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node localServer.js",
+    "dev": "node --watch localServer.js",
+    "init-tables": "node scripts/createTables.js",
+    "seed": "node scripts/seedData.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "keywords": [
+    "weatherly",
+    "aws-lambda",
+    "api-gateway",
+    "dynamodb",
+    "cloud-weather",
+    "nodejs"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.750.0",
+    "@aws-sdk/lib-dynamodb": "^3.750.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "serverless-http": "^3.2.0",
+    "uuid": "^9.0.1"
+  }
+}
