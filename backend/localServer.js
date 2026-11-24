@@ -70,8 +70,8 @@ app.use((req, res) => {
 });
 
 // Start server
-const PORT = environment.PORT || 5000;
-const server = app.listen(PORT, () => {
+const PORT = process.env.PORT || environment.PORT || 5000;
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`  Weatherly Backend API Server`);
   console.log(`  Running on: http://localhost:${PORT}`);

@@ -4,8 +4,8 @@
   "private": true,
   "description": "Weatherly - Cloud-Based Weather Monitoring System",
   "scripts": {
-    "build": "cd frontend && npm install --legacy-peer-deps && npm run build",
-    "start": "cd backend && npm start"
+    "start": "node backend/localServer.js",
+    "build": "cd frontend && npm install --legacy-peer-deps && npm run build"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.750.0",
