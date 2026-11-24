@@ -12,7 +12,11 @@ import { calculateDistanceKm } from '../utils/weatherUtils';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  'http://localhost:5000/api';
+  (typeof window !== 'undefined' &&
+  window.location.hostname !== 'localhost' &&
+  window.location.hostname !== '127.0.0.1'
+    ? '/api'
+    : 'http://localhost:5000/api');
 
 const DEFAULT_USER_ID = 'weatherly-default-user';
 
